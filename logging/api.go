@@ -5,8 +5,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/docker/docker/daemon/logger"
 	"github.com/docker/go-plugins-helpers/sdk"
+	"time"
 )
 
 const (
@@ -15,10 +15,25 @@ const (
 	stopLogging  = "/LogDriver.StopLogging"
 )
 
+type Info struct {
+	Config              map[string]string
+	ContainerID         string
+	ContainerName       string
+	ContainerEntrypoint string
+	ContainerArgs       []string
+	ContainerImageID    string
+	ContainerImageName  string
+	ContainerCreated    time.Time
+	ContainerEnv        []string
+	ContainerLabels     map[string]string
+	LogPath             string
+	DaemonName          string
+}
+
 // LogsRequest is the plugin secret request
 type LogsRequest struct {
 	File string
-	Info logger.Info
+	Info Info
 }
 
 // Response contains the plugin secret value

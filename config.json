@@ -1,0 +1,20 @@
+{
+  "description": "eqxiu logging chain plugin",
+  "documentation": "https://github.com/andy-zhangtao/logchain",
+  "entrypoint": ["/logchain"],
+  "network": {
+    "type": "host"
+  },
+  "interface": {
+    "types": ["docker.logdriver/1.0"],
+    "socket": "logchain.sock"
+  },
+  "env": [
+    {
+      "name": "LOG_LEVEL",
+      "description": "Set log level to output for plugin logs",
+      "value": "info",
+      "settable": ["value"]
+    }
+  ]
+}

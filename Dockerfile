@@ -1,3 +1,3 @@
 FROM    alpine
 ADD     logchain /logchain
-CMD     ["sh","-c","/logchain"]
+ENTRYPOINT     ["sh","-c","/logchain"]
