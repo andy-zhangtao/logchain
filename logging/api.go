@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	manifest     = `{"Implements": ["LogDriver"]}`
+	manifest     = `{"Implements": ["LoggingDriver"]}`
 	startLogging = "/LogDriver.StartLogging"
 	stopLogging  = "/LogDriver.StopLogging"
 )
