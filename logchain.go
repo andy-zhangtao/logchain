@@ -19,7 +19,6 @@ import (
 	"github.com/docker/docker/api/types/plugins/logdriver"
 	"time"
 	"strings"
-	"strconv"
 )
 
 type LogChain struct {
@@ -30,10 +29,10 @@ type LogChain struct {
 }
 
 type logPair struct {
-	jsonl   logger.Logger
+	jsonl  logger.Logger
 	driver logger.Logger
-	stream  io.ReadCloser
-	info    logger.Info
+	stream io.ReadCloser
+	info   logger.Info
 }
 
 func (lc *LogChain) Handler(lr logging.LogsRequest) error {
@@ -58,7 +57,7 @@ func (lc *LogChain) Handler(lr logging.LogsRequest) error {
 	}
 
 	log, err := New(lr.Info)
-	if err != nil{
+	if err != nil {
 		return errors.Wrap(err, "error creating logger driver")
 	}
 
@@ -134,15 +133,16 @@ func sendMessage(l logger.Logger, buf *logdriver.LogEntry, containerid string) b
 func New(info logger.Info) (logger.Logger, error) {
 	switch strings.ToLower(strings.TrimSpace(info.Config["driver"])) {
 	case "graylog":
-		p, _ := strconv.Atoi(info.Config["port"])
-		lcg := LCGrayLog{
-			URL:      info.Config["url"],
-			Protocal: info.Config["protocal"],
-			Port:     p,
-		}
-		return &lcg, nil
+		//p, _ := strconv.Atoi(info.Config["port"])
+		//lcg := LCGrayLog{
+		//	URL:      info.Config["url"],
+		//	Protocal: info.Config["protocal"],
+		//	Port:     p,
+		//}
+		//return &lcg, nil
+		return NewGelf(info)
 	default:
-		return new(LCGrayLog), nil
+		//return new(LCGrayLog), nil
+		return NewGelf(info)
 	}
-
 }

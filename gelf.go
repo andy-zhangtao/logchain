@@ -11,11 +11,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Graylog2/go-gelf/gelf"
+	"gopkg.in/Graylog2/go-gelf.v2/gelf"
 	"github.com/docker/docker/daemon/logger"
 	"github.com/docker/docker/daemon/logger/loggerutils"
 	"github.com/docker/docker/pkg/urlutil"
-	"github.com/sirupsen/logrus"
 )
 
 const name = "gelf"
@@ -27,18 +26,18 @@ type gelfLogger struct {
 	rawExtra json.RawMessage
 }
 
-func init() {
-	if err := logger.RegisterLogDriver(name, New); err != nil {
-		logrus.Fatal(err)
-	}
-	if err := logger.RegisterLogOptValidator(name, ValidateLogOpt); err != nil {
-		logrus.Fatal(err)
-	}
-}
+//func init() {
+//	if err := logger.RegisterLogDriver(name, New); err != nil {
+//		logrus.Fatal(err)
+//	}
+//	if err := logger.RegisterLogOptValidator(name, ValidateLogOpt); err != nil {
+//		logrus.Fatal(err)
+//	}
+//}
 
 // New creates a gelf logger using the configuration passed in on the
 // context. The supported context configuration variable is gelf-address.
-func New(info logger.Info) (logger.Logger, error) {
+func NewGelf(info logger.Info) (logger.Logger, error) {
 	// parse gelf address
 	address, err := parseAddress(info.Config["gelf-address"])
 	if err != nil {
