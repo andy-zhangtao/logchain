@@ -2,10 +2,31 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/Azure/go-ansiterm"
+  packages = [
+    ".",
+    "winterm"
+  ]
+  revision = "d6e3b3328b783f23731bc4d058875b0371ff8109"
+
+[[projects]]
+  branch = "v1"
+  name = "github.com/Graylog2/go-gelf"
+  packages = ["gelf"]
+  revision = "7ebf4f536d8f52a04bd794e815629ff499325a91"
+
+[[projects]]
   name = "github.com/Microsoft/go-winio"
   packages = ["."]
   revision = "7da180ee92d8bd8bb8c37fc560e673e6557c392f"
   version = "v0.4.7"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/Nvveen/Gotty"
+  packages = ["."]
+  revision = "cd527374f1e5bff4938207604a14f2e38a9cf512"
 
 [[projects]]
   name = "github.com/Sirupsen/logrus"
@@ -22,29 +43,49 @@
 [[projects]]
   name = "github.com/docker/docker"
   packages = [
+    "api/types",
+    "api/types/backend",
     "api/types/blkiodev",
     "api/types/container",
+    "api/types/filters",
     "api/types/mount",
+    "api/types/network",
+    "api/types/plugins/logdriver",
+    "api/types/registry",
     "api/types/strslice",
+    "api/types/swarm",
+    "api/types/versions",
     "daemon/logger",
     "daemon/logger/jsonfilelog",
     "daemon/logger/loggerutils",
     "pkg/filenotify",
     "pkg/ioutils",
     "pkg/jsonlog",
+    "pkg/jsonmessage",
     "pkg/longpath",
+    "pkg/plugingetter",
+    "pkg/plugins",
+    "pkg/plugins/transport",
+    "pkg/progress",
     "pkg/pubsub",
+    "pkg/random",
+    "pkg/streamformatter",
+    "pkg/stringid",
     "pkg/tailfile",
-    "pkg/templates"
+    "pkg/templates",
+    "pkg/term",
+    "pkg/term/windows",
+    "pkg/urlutil"
   ]
-  revision = "2f35d73b7dc7a9e234ea06f6145a26c37472c775"
-  version = "v17.04.0-ce-rc2"
+  revision = "90d35abf7b3535c1c319c872900fbd76374e521c"
+  version = "v17.05.0-ce-rc3"
 
 [[projects]]
   name = "github.com/docker/go-connections"
   packages = [
     "nat",
-    "sockets"
+    "sockets",
+    "tlsconfig"
   ]
   revision = "3ede32e2033de7505e6500d6c868c2b9ed9f169d"
   version = "v0.3.0"
@@ -68,10 +109,37 @@
   version = "v1.4.7"
 
 [[projects]]
+  name = "github.com/gogo/protobuf"
+  packages = [
+    "io",
+    "proto"
+  ]
+  revision = "342cbe0a04158f6dcb03ca0079991a51a4248c02"
+  version = "v0.5"
+
+[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/robertkowalski/graylog-golang"
+  packages = ["."]
+  revision = "e5295cfa28272ada50cb9b5d97696ee06e49ed42"
+
+[[projects]]
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
+  version = "v1.0.3"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/tonistiigi/fifo"
+  packages = ["."]
+  revision = "fbfb6a11ec671efbe94ad1c12c2e98773f19e1e6"
 
 [[projects]]
   branch = "master"
@@ -97,9 +165,15 @@
   ]
   revision = "03467258950d845cd1877eab69461b98e8c09219"
 
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/time"
+  packages = ["rate"]
+  revision = "6dc17368e09b0e8634d71cac8168d853e869a0c7"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b588b71bbc3418320a920a636140d08d08b3deaf95dc4fe1783adc4b4ee24fce"
+  inputs-digest = "b2be3dfddc90927022b610c67ecb7dc564c9f00e6370756d55e6931096d38fa9"
   solver-name = "gps-cdcl"
   solver-version = 1
