@@ -42,7 +42,7 @@ func (lc *LogChain) Handler(lr logging.LogsRequest) error {
 	if err := os.MkdirAll(filepath.Dir(lr.Info.LogPath), 0755); err != nil {
 		return errors.Wrap(err, "error setting up logger dir")
 	}
-
+	info := logger.Info{}
 	jsonl, err := jsonfilelog.New()
 	if err != nil {
 		return errors.Wrap(err, "error creating jsonfile logger")
