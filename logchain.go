@@ -18,6 +18,7 @@ import (
 	"github.com/docker/docker/api/types/plugins/logdriver"
 	"time"
 	"strings"
+	"strconv"
 )
 
 type LogChain struct {
@@ -28,10 +29,11 @@ type LogChain struct {
 }
 
 type logPair struct {
-	jsonl  logger.Logger
-	driver logger.Logger
-	stream io.ReadCloser
-	info   logger.Info
+	jsonl    logger.Logger
+	driver   logger.Logger
+	stream   io.ReadCloser
+	info     logger.Info
+	bufLines int /*一次缓存的行数*/
 }
 
 func (lc *LogChain) Handler(lr logging.LogsRequest) error {
@@ -67,7 +69,12 @@ func (lc *LogChain) Handler(lr logging.LogsRequest) error {
 
 	lc.mu.Lock()
 
-	lf := &logPair{jsonl, log, f, lr.Info}
+	line, err := strconv.Atoi(lr.Info.Config["buf"])
+	if err != nil {
+		line = 1
+	}
+
+	lf := &logPair{jsonl, log, f, lr.Info, line}
 
 	lc.logs[lr.File] = lf
 	lc.idx[lr.Info.ContainerID] = lf
@@ -84,22 +91,39 @@ func (lc *LogChain) HandlerStop(logging.LogsRequest) error {
 }
 
 func consumeLog(lf *logPair) {
+	var tempStr []string
+
 	dec := protoio.NewUint32DelimitedReader(lf.stream, binary.BigEndian, 1e6)
 	defer dec.Close()
 	var buf logdriver.LogEntry
+	idx := 0
 	for {
+		idx ++
 		if err := dec.ReadMsg(&buf); err != nil {
 			if err == io.EOF {
 				fmt.Errorf("id [%s] err [%s] shutting down log logger \n", lf.info.ContainerID, err.Error())
+				if len(tempStr) >0{
+					buf.Line = append([]byte(strings.Join(tempStr, "\n\r")), buf.Line...)
+					sendMessage(lf.driver, &buf, lf.info.ContainerID)
+				}
 				lf.stream.Close()
 				return
 			}
 			dec = protoio.NewUint32DelimitedReader(lf.stream, binary.BigEndian, 1e6)
 		}
 
-		//fmt.Printf("Receive [%s] \n", buf.String())
-		if sendMessage(lf.driver, &buf, lf.info.ContainerID) == false {
-			continue
+		if idx >= lf.bufLines {
+			buf.Line = append([]byte(strings.Join(tempStr, "\n\r")), buf.Line...)
+			if sendMessage(lf.driver, &buf, lf.info.ContainerID) == false {
+				continue
+			}
+			tempStr = tempStr[:0]
+			idx = 0
+		} else {
+			//if sendMessage(lf.driver, &buf, lf.info.ContainerID) == false {
+			//	continue
+			//}
+			tempStr = append(tempStr, string(buf.Line))
 		}
 
 		//if sendMessage(lf.jsonl, &buf, lf.info.ContainerID) == false {
