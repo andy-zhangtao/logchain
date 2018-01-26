@@ -10,14 +10,14 @@ run: build
 
 docker: *.go *md
 	GOOS=linux GOARCH=amd64 go build -ldflags "-X main._VERSION_=$(shell date +%Y%m%d)" -a -o $(name)
-	docker build -t vikings/$(name) .
+	docker build -t vikings/$(name):v1 .
 
 release: docker
-	docker push vikings/$(name)
+	#docker push vikings/$(name):v1
 
 rootfs: release
 	@echo "### create rootfs directory in ./rootfs"
 	mkdir -p ./rootfs
-	docker create --name tmprootfs vikings/$(name)
+	docker create --name tmprootfs vikings/$(name):v1
 	docker export tmprootfs | tar -x -C ./rootfs
 	docker rm -vf tmprootfs
