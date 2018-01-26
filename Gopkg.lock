@@ -11,12 +11,6 @@
   revision = "d6e3b3328b783f23731bc4d058875b0371ff8109"
 
 [[projects]]
-  branch = "v1"
-  name = "github.com/Graylog2/go-gelf"
-  packages = ["gelf"]
-  revision = "7ebf4f536d8f52a04bd794e815629ff499325a91"
-
-[[projects]]
   name = "github.com/Microsoft/go-winio"
   packages = ["."]
   revision = "7da180ee92d8bd8bb8c37fc560e673e6557c392f"
@@ -130,12 +124,6 @@
   revision = "e5295cfa28272ada50cb9b5d97696ee06e49ed42"
 
 [[projects]]
-  name = "github.com/sirupsen/logrus"
-  packages = ["."]
-  revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
-  version = "v1.0.3"
-
-[[projects]]
   branch = "master"
   name = "github.com/tonistiigi/fifo"
   packages = ["."]
@@ -145,7 +133,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "3d37316aaa6bd9929127ac9a527abf408178ea7b"
+  revision = "0efb9460aaf800c6376acf625be2853bceac2e06"
 
 [[projects]]
   branch = "master"
@@ -171,9 +159,15 @@
   packages = ["rate"]
   revision = "6dc17368e09b0e8634d71cac8168d853e869a0c7"
 
+[[projects]]
+  branch = "v2"
+  name = "gopkg.in/Graylog2/go-gelf.v2"
+  packages = ["gelf"]
+  revision = "4143646226541087117ff2f83334ea48b3201841"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b2be3dfddc90927022b610c67ecb7dc564c9f00e6370756d55e6931096d38fa9"
+  inputs-digest = "defbe9ce6c8acf8385d3d85d941def1186e63aaa2cc0a8576204670e205e8f48"
   solver-name = "gps-cdcl"
   solver-version = 1
