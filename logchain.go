@@ -10,7 +10,6 @@ import (
 	"os"
 	"github.com/pkg/errors"
 	"github.com/docker/docker/daemon/logger/jsonfilelog"
-	"github.com/Sirupsen/logrus"
 	"syscall"
 	"github.com/tonistiigi/fifo"
 	"context"
@@ -61,8 +60,6 @@ func (lc *LogChain) Handler(lr logging.LogsRequest) error {
 		return errors.Wrap(err, "error creating logger driver")
 	}
 
-	logrus.WithField("id", lr.Info.ContainerID).WithField("file", lr.File).WithField("logpath", lr.Info.LogPath).Debugf("Start logging")
-
 	f, err := fifo.OpenFifo(context.Background(), lr.File, syscall.O_RDONLY, 0700)
 	if err != nil {
 		return errors.Wrapf(err, "error opening logger fifo: %q", lr.File)
@@ -93,7 +90,7 @@ func consumeLog(lf *logPair) {
 	for {
 		if err := dec.ReadMsg(&buf); err != nil {
 			if err == io.EOF {
-				logrus.WithField("id", lf.info.ContainerID).WithError(err).Debug("shutting down log logger")
+				fmt.Errorf("id [%s] err [%s] shutting down log logger \n", lf.info.ContainerID, err.Error())
 				lf.stream.Close()
 				return
 			}
@@ -121,7 +118,7 @@ func sendMessage(l logger.Logger, buf *logdriver.LogEntry, containerid string) b
 	msg.Timestamp = time.Unix(0, buf.TimeNano)
 	err := l.Log(&msg)
 	if err != nil {
-		logrus.WithField("id", containerid).WithError(err).WithField("message", msg).Error("error writing log message")
+		fmt.Errorf("id [%s] err [%s] error writing log message \n", containerid, err.Error())
 		return false
 	}
 	return true
@@ -133,16 +130,8 @@ func sendMessage(l logger.Logger, buf *logdriver.LogEntry, containerid string) b
 func New(info logger.Info) (logger.Logger, error) {
 	switch strings.ToLower(strings.TrimSpace(info.Config["driver"])) {
 	case "graylog":
-		//p, _ := strconv.Atoi(info.Config["port"])
-		//lcg := LCGrayLog{
-		//	URL:      info.Config["url"],
-		//	Protocal: info.Config["protocal"],
-		//	Port:     p,
-		//}
-		//return &lcg, nil
 		return NewGelf(info)
 	default:
-		//return new(LCGrayLog), nil
 		return NewGelf(info)
 	}
 }

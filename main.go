@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
-	"github.com/Sirupsen/logrus"
 	"github.com/andy-zhangtao/logchain/logging"
 	"strconv"
 	"os/user"
+	"github.com/Sirupsen/logrus"
 )
 
 const socketAddress = "/run/docker/plugins/logchain.sock"
