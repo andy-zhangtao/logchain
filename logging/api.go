@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/docker/go-plugins-helpers/sdk"
-	"time"
 	"fmt"
+	"github.com/docker/docker/daemon/logger"
 )
 
 const (
@@ -16,25 +16,10 @@ const (
 	stopLogging  = "/LogDriver.StopLogging"
 )
 
-type Info struct {
-	Config              map[string]string
-	ContainerID         string
-	ContainerName       string
-	ContainerEntrypoint string
-	ContainerArgs       []string
-	ContainerImageID    string
-	ContainerImageName  string
-	ContainerCreated    time.Time
-	ContainerEnv        []string
-	ContainerLabels     map[string]string
-	LogPath             string
-	DaemonName          string
-}
-
 // LogsRequest is the plugin secret request
 type LogsRequest struct {
 	File string
-	Info Info
+	Info logger.Info
 }
 
 // Response contains the plugin secret value
@@ -55,8 +40,8 @@ type Handler struct {
 }
 
 // NewHandler initializes the request handler with a driver implementation.
-func NewHandler(plugin *Plugin) *Handler {
-	h := &Handler{plugin, sdk.NewHandler(manifest)}
+func NewHandler(plugin Plugin) *Handler {
+	h := &Handler{&plugin, sdk.NewHandler(manifest)}
 	h.initMux()
 	return h
 }

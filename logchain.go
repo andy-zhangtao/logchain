@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/andy-zhangtao/logchain/logging"
 	"fmt"
-	"io/ioutil"
 	"sync"
 	"github.com/docker/docker/daemon/logger"
 	"io"
@@ -11,6 +10,13 @@ import (
 	"os"
 	"github.com/pkg/errors"
 	"github.com/docker/docker/daemon/logger/jsonfilelog"
+	"github.com/Sirupsen/logrus"
+	"syscall"
+	"github.com/tonistiigi/fifo"
+	"context"
+	"encoding/binary"
+	protoio "github.com/gogo/protobuf/io"
+	"github.com/docker/docker/api/types/plugins/logdriver"
 )
 
 type LogChain struct {
@@ -24,7 +30,7 @@ type logPair struct {
 	jsonl   logger.Logger
 	splunkl logger.Logger
 	stream  io.ReadCloser
-	info    logging.Info
+	info    logger.Info
 }
 
 func (lc *LogChain) Handler(lr logging.LogsRequest) error {
@@ -42,22 +48,59 @@ func (lc *LogChain) Handler(lr logging.LogsRequest) error {
 	if err := os.MkdirAll(filepath.Dir(lr.Info.LogPath), 0755); err != nil {
 		return errors.Wrap(err, "error setting up logger dir")
 	}
-	info := logger.Info{}
-	jsonl, err := jsonfilelog.New()
+
+	jsonl, err := jsonfilelog.New(lr.Info)
 	if err != nil {
 		return errors.Wrap(err, "error creating jsonfile logger")
 	}
 
-	data, err := ioutil.ReadFile(lr.File)
+	logrus.WithField("id", lr.Info.ContainerID).WithField("file", lr.File).WithField("logpath", lr.Info.LogPath).Debugf("Start logging")
+
+	f, err := fifo.OpenFifo(context.Background(), lr.File, syscall.O_RDONLY, 0700)
 	if err != nil {
-		fmt.Printf("======handler==[%v]\n", err.Error())
-		return err
+		return errors.Wrapf(err, "error opening logger fifo: %q", lr.File)
 	}
-	fmt.Printf("======handler==[%s]\n", string(data))
+
+	lc.mu.Lock()
+
+	lf := &logPair{jsonl, nil, f, lr.Info}
+
+	lc.logs[lr.File] = lf
+	lc.idx[lr.Info.ContainerID] = lf
+	lc.mu.Unlock()
+
+	go consumeLog(lf)
+	fmt.Println("log startLogging end")
 	return nil
 }
 
 func (lc *LogChain) HandlerStop(logging.LogsRequest) error {
 	fmt.Println("======handler stop")
 	return nil
+}
+
+func consumeLog(lf *logPair) {
+	dec := protoio.NewUint32DelimitedReader(lf.stream, binary.BigEndian, 1e6)
+	defer dec.Close()
+	var buf logdriver.LogEntry
+	for {
+		if err := dec.ReadMsg(&buf); err != nil {
+			if err == io.EOF {
+				logrus.WithField("id", lf.info.ContainerID).WithError(err).Debug("shutting down log logger")
+				lf.stream.Close()
+				return
+			}
+			dec = protoio.NewUint32DelimitedReader(lf.stream, binary.BigEndian, 1e6)
+		}
+
+		fmt.Printf("Receive [%s] \n", buf.String())
+		//if sendMessage(lf.splunkl, &buf, lf.info.ContainerID) == false {
+		//	continue
+		//}
+		//if sendMessage(lf.jsonl, &buf, lf.info.ContainerID) == false {
+		//	continue
+		//}
+
+		buf.Reset()
+	}
 }

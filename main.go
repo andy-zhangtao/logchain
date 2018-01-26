@@ -32,7 +32,12 @@ func main() {
 	u, _ := user.Lookup("root")
 	gid, _ := strconv.Atoi(u.Gid)
 
-	h := logging.NewHandler(LogChain{})
+	lc := LogChain{
+		logs: make(map[string]*logPair),
+		idx:  make(map[string]*logPair),
+	}
+
+	h := logging.NewHandler(&lc)
 
 	if err := h.ServeUnix(socketAddress, gid); err != nil {
 		panic(err)
