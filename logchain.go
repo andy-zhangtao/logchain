@@ -37,7 +37,7 @@ type logPair struct {
 }
 
 func (lc *LogChain) Handler(lr logging.LogsRequest) error {
-	
+
 	lc.mu.Lock()
 	if _, exists := lc.logs[lr.File]; exists {
 		lc.mu.Unlock()
