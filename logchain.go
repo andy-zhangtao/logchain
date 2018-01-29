@@ -37,6 +37,7 @@ type logPair struct {
 }
 
 func (lc *LogChain) Handler(lr logging.LogsRequest) error {
+	
 	lc.mu.Lock()
 	if _, exists := lc.logs[lr.File]; exists {
 		lc.mu.Unlock()
@@ -81,12 +82,12 @@ func (lc *LogChain) Handler(lr logging.LogsRequest) error {
 	lc.mu.Unlock()
 
 	go consumeLog(lf)
-	fmt.Println("log startLogging end")
+
 	return nil
 }
 
 func (lc *LogChain) HandlerStop(logging.LogsRequest) error {
-	fmt.Println("======handler stop")
+	//fmt.Println("======handler stop")
 	return nil
 }
 
@@ -102,7 +103,7 @@ func consumeLog(lf *logPair) {
 		if err := dec.ReadMsg(&buf); err != nil {
 			if err == io.EOF {
 				fmt.Errorf("id [%s] err [%s] shutting down log logger \n", lf.info.ContainerID, err.Error())
-				if len(tempStr) >0{
+				if len(tempStr) > 0 {
 					buf.Line = append([]byte(strings.Join(tempStr, "\n\r")), buf.Line...)
 					sendMessage(lf.driver, &buf, lf.info.ContainerID)
 				}
@@ -120,15 +121,8 @@ func consumeLog(lf *logPair) {
 			tempStr = tempStr[:0]
 			idx = 0
 		} else {
-			//if sendMessage(lf.driver, &buf, lf.info.ContainerID) == false {
-			//	continue
-			//}
 			tempStr = append(tempStr, string(buf.Line))
 		}
-
-		//if sendMessage(lf.jsonl, &buf, lf.info.ContainerID) == false {
-		//	continue
-		//}
 
 		buf.Reset()
 	}

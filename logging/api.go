@@ -8,6 +8,7 @@ import (
 	"github.com/docker/go-plugins-helpers/sdk"
 	"fmt"
 	"github.com/docker/docker/daemon/logger"
+	"strings"
 )
 
 const (
@@ -48,7 +49,6 @@ func NewHandler(plugin Plugin) *Handler {
 
 func (h *Handler) initMux() {
 	h.HandleFunc(startLogging, func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("start")
 		var req LogsRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -58,19 +58,18 @@ func (h *Handler) initMux() {
 			respond(errors.New("must provide container id in log context"), w)
 			return
 		}
-		fmt.Printf("in startLogging [%v]\n", req.Info)
-		fmt.Printf("in startLogging [%v]\n", req.File)
 
+		parseParaViaEnv(&req)
 		err := (*h.plugin).Handler(req)
 		respond(err, w)
 	})
 	h.HandleFunc(stopLogging, func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("stop")
 		var req LogsRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		parseParaViaEnv(&req)
 		err := (*h.plugin).HandlerStop(req)
 		respond(err, w)
 	})
@@ -92,9 +91,40 @@ func respond(err error, w http.ResponseWriter) {
 		data = []byte("{}")
 	}
 
-	fmt.Printf("Send Response [%s]\n", string(data))
 	_, err = w.Write(data)
 	if err != nil {
 		fmt.Printf("Send Response error[%s]\n", err.Error())
+	}
+}
+
+// parsePara
+// If we manager docker via systemd. There has no way to configure parameter in systemd. So we will meet CAE issue (Chicken and eggs.)
+// Then we parse parameter via env.
+func parseParaViaEnv(lr *LogsRequest) {
+	log_opt := ""
+	for _, s := range lr.Info.ContainerEnv {
+		if strings.Contains(s, "log-opt=") {
+			log_opt = s[len("log-opt="):]
+			break
+		}
+	}
+
+	if log_opt == "" {
+		return
+	}
+
+	for _, lg := range strings.Split(log_opt, ";") {
+		lgs := strings.Split(lg, "--log-opt")
+
+		if len(lgs) != 2 {
+			continue
+		}
+
+		lgk := strings.Split(lgs[1], "=")
+		if len(lgk) != 2 {
+			continue
+		}
+
+		lr.Info.Config[strings.TrimSpace(lgk[0])] = strings.TrimSpace(lgk[1])
 	}
 }
