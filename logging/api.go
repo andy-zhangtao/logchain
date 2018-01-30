@@ -103,8 +103,8 @@ func respond(err error, w http.ResponseWriter) {
 func parseParaViaEnv(lr *LogsRequest) {
 	log_opt := ""
 	for _, s := range lr.Info.ContainerEnv {
-		if strings.Contains(s, "log-opt=") {
-			log_opt = s[len("log-opt="):]
+		if strings.Contains(s, "log_opt=") {
+			log_opt = s[len("log_opt="):]
 			break
 		}
 	}
