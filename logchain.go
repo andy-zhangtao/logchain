@@ -150,6 +150,6 @@ func New(info logger.Info) (logger.Logger, error) {
 	case "graylog":
 		return NewGelf(info)
 	default:
-		return NewGelf(info)
+		return jsonfilelog.New(info)
 	}
 }
