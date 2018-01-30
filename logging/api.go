@@ -110,6 +110,7 @@ func parseParaViaEnv(lr *LogsRequest) {
 	}
 
 	if log_opt == "" {
+		fmt.Println("Not Find Log_Opt. Then use default logger json-file")
 		return
 	}
 
@@ -127,4 +128,5 @@ func parseParaViaEnv(lr *LogsRequest) {
 
 		lr.Info.Config[strings.TrimSpace(lgk[0])] = strings.TrimSpace(lgk[1])
 	}
+	lr.Info.Config["driver"] = "graylog"
 }
