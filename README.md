@@ -32,3 +32,8 @@ Create container
 ```
 docker run -e log-opt="--log-opt buf="10";--log-opt gelf-address=udp://xxxx;--log-opt env=xxxx "
 ```
+
+## Change Log
+
+* v1.0.4
+ - 当容器退出时,按照指定的log driver处理缓存数据，而不是直接丢弃

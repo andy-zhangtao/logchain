@@ -113,7 +113,7 @@ func parseParaViaEnv(lr *LogsRequest) {
 		fmt.Println("Not Find Log_Opt. Then use default logger json-file")
 		return
 	}
-
+	
 	for _, lg := range strings.Split(log_opt, ";") {
 		lgs := strings.Split(lg, "--log-opt")
 

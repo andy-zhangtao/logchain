@@ -25,6 +25,7 @@ type LogChain struct {
 	mu     sync.Mutex
 	logs   map[string]*logPair
 	idx    map[string]*logPair
+	stop   chan int
 	logger logger.Logger
 }
 
@@ -35,6 +36,9 @@ type logPair struct {
 	info     logger.Info
 	bufLines int /*一次缓存的行数*/
 }
+
+var buf logdriver.LogEntry
+var tempStr []string
 
 func (lc *LogChain) Handler(lr logging.LogsRequest) error {
 
@@ -82,27 +86,32 @@ func (lc *LogChain) Handler(lr logging.LogsRequest) error {
 	lc.mu.Unlock()
 
 	go consumeLog(lf)
-
+	go func() {
+		select {
+		case <-lc.stop:
+			buf.Line = append([]byte(strings.Join(tempStr, "\n\r")), buf.Line...)
+			sendMessage(lf.driver, &buf, lf.info.ContainerID)
+		}
+	}()
 	return nil
 }
 
-func (lc *LogChain) HandlerStop(logging.LogsRequest) error {
-	//fmt.Println("======handler stop")
+func (lc *LogChain) HandlerStop(lr logging.LogsRequest) error {
+	lc.stop <- 1
 	return nil
 }
 
 func consumeLog(lf *logPair) {
-	var tempStr []string
 
 	dec := protoio.NewUint32DelimitedReader(lf.stream, binary.BigEndian, 1e6)
 	defer dec.Close()
-	var buf logdriver.LogEntry
+
 	idx := 0
 	for {
 		idx ++
 		if err := dec.ReadMsg(&buf); err != nil {
 			if err == io.EOF {
-				fmt.Errorf("id [%s] err [%s] shutting down log logger \n", lf.info.ContainerID, err.Error())
+				fmt.Errorf("Name [%s] err [%s] shutting down log logger \n", lf.info.ContainerName, err.Error())
 				if len(tempStr) > 0 {
 					buf.Line = append([]byte(strings.Join(tempStr, "\n\r")), buf.Line...)
 					sendMessage(lf.driver, &buf, lf.info.ContainerID)
