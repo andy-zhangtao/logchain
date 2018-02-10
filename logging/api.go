@@ -4,23 +4,36 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-
 	"github.com/docker/go-plugins-helpers/sdk"
-	"fmt"
+
 	"github.com/docker/docker/daemon/logger"
 	"strings"
+	"reflect"
+	"encoding/binary"
+	protoio "github.com/gogo/protobuf/io"
+
+	"github.com/docker/docker/api/types/plugins/logdriver"
+	"github.com/andy-zhangtao/gogather/time"
+	"strconv"
+	"fmt"
 )
 
 const (
 	manifest     = `{"Implements": ["LoggingDriver"]}`
 	startLogging = "/LogDriver.StartLogging"
 	stopLogging  = "/LogDriver.StopLogging"
+	readLog      = "/LogDriver.ReadLogs"
 )
 
 // LogsRequest is the plugin secret request
 type LogsRequest struct {
 	File string
 	Info logger.Info
+}
+
+type LogsReadRequest struct {
+	Config logger.ReadConfig
+	Info   logger.Info
 }
 
 // Response contains the plugin secret value
@@ -44,6 +57,72 @@ type Handler struct {
 func NewHandler(plugin Plugin) *Handler {
 	h := &Handler{&plugin, sdk.NewHandler(manifest)}
 	h.initMux()
+	// enable HandlerRead
+	readHeader := reflect.ValueOf(plugin).MethodByName("HandlerRead")
+	if readHeader.IsValid() {
+
+		h.HandleFunc("/LogDriver.Capabilities", func(w http.ResponseWriter, r *http.Request) {
+
+			type logPluginProxyCapabilitiesResponse struct {
+				Cap logger.Capability
+				Err string
+			}
+
+			re := logPluginProxyCapabilitiesResponse{Cap: logger.Capability{ReadLogs: true}, Err: ""}
+			data, _ := json.Marshal(&re)
+
+			w.Write(data)
+		})
+
+		h.HandleFunc(readLog, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/x-json-stream")
+			var config LogsReadRequest
+			if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			result := readHeader.Call([]reflect.Value{reflect.ValueOf(config)})
+			err := result[1].Interface()
+			if err != nil {
+				http.Error(w, err.(error).Error(), http.StatusBadRequest)
+				return
+			}
+
+			watcher := result[0].Interface().(*logger.LogWatcher)
+			writer := protoio.NewUint32DelimitedWriter(w, binary.BigEndian)
+			for {
+				select {
+				case m := <-watcher.Msg:
+					nn, err := strconv.ParseInt(time.GetTimeStamp(19), 10, 64)
+					if err != nil {
+						fmt.Errorf("Get TimeNano Error[%s]\n", err.Error())
+					}
+					msg := logdriver.LogEntry{
+						Source:   "stdout",
+						Partial:  false,
+						TimeNano: nn,
+					}
+					if m == nil {
+						msg.Partial = true
+						msg.Line = []byte("\n")
+						writer.WriteMsg(&msg)
+						writer.Close()
+						return
+					}
+					msg.Line = m.Line
+					err = writer.WriteMsg(&msg)
+					if err != nil {
+						fmt.Errorf("Write Msg Error[%s]\n", err.Error())
+					}
+
+				case <-watcher.Err:
+					return
+				}
+			}
+		})
+	}
+
 	return h
 }
 
@@ -113,7 +192,7 @@ func parseParaViaEnv(lr *LogsRequest) {
 		fmt.Println("Not Find Log_Opt. Then use default logger json-file")
 		return
 	}
-	
+
 	for _, lg := range strings.Split(log_opt, ";") {
 		lgs := strings.Split(lg, "--log-opt")
 

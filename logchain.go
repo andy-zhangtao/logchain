@@ -101,6 +101,15 @@ func (lc *LogChain) HandlerStop(lr logging.LogsRequest) error {
 	return nil
 }
 
+func (lc *LogChain) HandlerRead(config logging.LogsReadRequest) (*logger.LogWatcher, error) {
+	lr := lc.idx[config.Info.ContainerID]
+	if jsReader, ok := lr.jsonl.(logger.LogReader); !ok {
+		return nil, errors.New("Get LogReader Errro")
+	} else {
+		return jsReader.ReadLogs(config.Config), nil
+	}
+}
+
 func consumeLog(lf *logPair) {
 
 	dec := protoio.NewUint32DelimitedReader(lf.stream, binary.BigEndian, 1e6)
@@ -121,6 +130,8 @@ func consumeLog(lf *logPair) {
 			}
 			dec = protoio.NewUint32DelimitedReader(lf.stream, binary.BigEndian, 1e6)
 		}
+
+		lf.jsonl.Log(&logger.Message{Line: buf.Line, Source: lf.info.ContainerName})
 
 		if idx >= lf.bufLines {
 			buf.Line = append([]byte(strings.Join(tempStr, "\n\r")), buf.Line...)
