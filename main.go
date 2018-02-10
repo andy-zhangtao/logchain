@@ -19,7 +19,7 @@ var logLevels = map[string]logrus.Level{
 }
 
 func main() {
-	logrus.Println("==LogChain 1.0.5==")
+	logrus.Println("==LogChain 1.0.7==")
 	levelVal := os.Getenv("LOG_LEVEL")
 	if levelVal == "" {
 		levelVal = "info"
@@ -45,5 +45,5 @@ func main() {
 		panic(err)
 	}
 
-	logrus.Println("===========end==============")
+	logrus.Println("===========LogChain Bye!==============")
 }

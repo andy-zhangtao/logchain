@@ -34,8 +34,9 @@ type logPair struct {
 	driver   logger.Logger
 	stream   io.ReadCloser
 	info     logger.Info
-	bufLines int      /*一次缓存的行数*/
-	tempStr  []string /*缓存的日志*/
+	bufLines int        /*一次缓存的行数*/
+	tempStr  []string   /*缓存的日志*/
+	mutex    sync.Mutex /*同步锁防止数据错误*/
 }
 
 var bufMap map[string]logdriver.LogEntry
@@ -81,13 +82,36 @@ func (lc *LogChain) Handler(lr logging.LogsRequest) error {
 	}
 
 	var ts []string
-	lf := &logPair{jsonl, log, f, lr.Info, line, ts}
+	var mutex sync.Mutex
+	lf := &logPair{jsonl, log, f, lr.Info, line, ts, mutex}
 
 	lc.logs[lr.File] = lf
 	lc.idx[lr.Info.ContainerID] = lf
 	lc.mu.Unlock()
 
 	go consumeLog(lf)
+	go func() {
+		/*每10秒推送一次日志*/
+		for {
+			now := time.Now()
+			next := now.Add(time.Minute * 1)
+			next = time.Date(next.Year(), next.Month(), next.Day(), next.Hour(), next.Minute(), 0, 0, next.Location())
+			t := time.NewTimer(next.Sub(now))
+
+			select {
+			case <-t.C:
+				buf := getLogEntry(lr.Info.ContainerID)
+				if len(lf.tempStr) > 0 || len(buf.Line) > 0 {
+					lf.mutex.Lock()
+					buf.Line = append([]byte(strings.Join(lf.tempStr, "\n\r")), buf.Line...)
+					sendMessage(lf.driver, buf, lf.info.ContainerID)
+					lf.mutex.Unlock()
+					lf.resetStr()
+				}
+
+			}
+		}
+	}()
 	go func() {
 		select {
 		case <-lc.stop:
@@ -142,10 +166,12 @@ func consumeLog(lf *logPair) {
 			if sendMessage(lf.driver, buf, lf.info.ContainerID) == false {
 				continue
 			}
-			lf.tempStr = lf.tempStr[:0]
+			//lf.tempStr = lf.tempStr[:0]
+			lf.resetStr()
 			idx = 0
 		} else {
-			lf.tempStr = append(lf.tempStr, string(buf.Line))
+			//lf.tempStr = append(lf.tempStr, string(buf.Line))
+			lf.addStr(string(buf.Line))
 		}
 
 		buf.Reset()
@@ -187,4 +213,18 @@ func getLogEntry(id string) *logdriver.LogEntry {
 		buf = logdriver.LogEntry{}
 	}
 	return &buf
+}
+
+func (lf *logPair) addStr(str string) {
+	lf.mutex.Lock()
+	defer lf.mutex.Unlock()
+
+	lf.tempStr = append(lf.tempStr, str)
+}
+
+func (lf *logPair) resetStr() {
+	lf.mutex.Lock()
+	defer lf.mutex.Unlock()
+
+	lf.tempStr = lf.tempStr[:0]
 }

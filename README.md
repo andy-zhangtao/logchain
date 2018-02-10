@@ -53,6 +53,8 @@ docker enable logchain
 Test it!
 
 ## Change Log
+* v1.0.7
+  - 支持定时输出日志. 此版本间隔1分钟刷新一次日志
 
 * v1.0.6
   - 修复输出日志时，不同容器之间相互干扰输出的问题
