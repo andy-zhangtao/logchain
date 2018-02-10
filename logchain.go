@@ -34,11 +34,12 @@ type logPair struct {
 	driver   logger.Logger
 	stream   io.ReadCloser
 	info     logger.Info
-	bufLines int /*一次缓存的行数*/
+	bufLines int      /*一次缓存的行数*/
+	tempStr  []string /*缓存的日志*/
 }
 
-var buf logdriver.LogEntry
-var tempStr []string
+var bufMap map[string]logdriver.LogEntry
+//var tempStr []string
 
 func (lc *LogChain) Handler(lr logging.LogsRequest) error {
 
@@ -79,7 +80,8 @@ func (lc *LogChain) Handler(lr logging.LogsRequest) error {
 		line = 1
 	}
 
-	lf := &logPair{jsonl, log, f, lr.Info, line}
+	var ts []string
+	lf := &logPair{jsonl, log, f, lr.Info, line, ts}
 
 	lc.logs[lr.File] = lf
 	lc.idx[lr.Info.ContainerID] = lf
@@ -89,8 +91,9 @@ func (lc *LogChain) Handler(lr logging.LogsRequest) error {
 	go func() {
 		select {
 		case <-lc.stop:
-			buf.Line = append([]byte(strings.Join(tempStr, "\n\r")), buf.Line...)
-			sendMessage(lf.driver, &buf, lf.info.ContainerID)
+			buf := getLogEntry(lr.Info.ContainerID)
+			buf.Line = append([]byte(strings.Join(lf.tempStr, "\n\r")), buf.Line...)
+			sendMessage(lf.driver, buf, lf.info.ContainerID)
 		}
 	}()
 	return nil
@@ -114,16 +117,17 @@ func consumeLog(lf *logPair) {
 
 	dec := protoio.NewUint32DelimitedReader(lf.stream, binary.BigEndian, 1e6)
 	defer dec.Close()
+	buf := getLogEntry(lf.info.ContainerID)
 
 	idx := 0
 	for {
 		idx ++
-		if err := dec.ReadMsg(&buf); err != nil {
+		if err := dec.ReadMsg(buf); err != nil {
 			if err == io.EOF {
 				fmt.Errorf("Name [%s] err [%s] shutting down log logger \n", lf.info.ContainerName, err.Error())
-				if len(tempStr) > 0 {
-					buf.Line = append([]byte(strings.Join(tempStr, "\n\r")), buf.Line...)
-					sendMessage(lf.driver, &buf, lf.info.ContainerID)
+				if len(lf.tempStr) > 0 {
+					buf.Line = append([]byte(strings.Join(lf.tempStr, "\n\r")), buf.Line...)
+					sendMessage(lf.driver, buf, lf.info.ContainerID)
 				}
 				lf.stream.Close()
 				return
@@ -134,14 +138,14 @@ func consumeLog(lf *logPair) {
 		lf.jsonl.Log(&logger.Message{Line: buf.Line, Source: lf.info.ContainerName})
 
 		if idx >= lf.bufLines {
-			buf.Line = append([]byte(strings.Join(tempStr, "\n\r")), buf.Line...)
-			if sendMessage(lf.driver, &buf, lf.info.ContainerID) == false {
+			buf.Line = append([]byte(strings.Join(lf.tempStr, "\n\r")), buf.Line...)
+			if sendMessage(lf.driver, buf, lf.info.ContainerID) == false {
 				continue
 			}
-			tempStr = tempStr[:0]
+			lf.tempStr = lf.tempStr[:0]
 			idx = 0
 		} else {
-			tempStr = append(tempStr, string(buf.Line))
+			lf.tempStr = append(lf.tempStr, string(buf.Line))
 		}
 
 		buf.Reset()
@@ -168,8 +172,19 @@ func sendMessage(l logger.Logger, buf *logdriver.LogEntry, containerid string) b
 func New(info logger.Info) (logger.Logger, error) {
 	switch strings.ToLower(strings.TrimSpace(info.Config["driver"])) {
 	case "graylog":
+		bufMap = make(map[string]logdriver.LogEntry)
 		return NewGelf(info)
 	default:
 		return jsonfilelog.New(info)
 	}
+}
+
+//getLogEntry 获取容器唯一的日志数据
+//id 容器ID
+func getLogEntry(id string) *logdriver.LogEntry {
+	buf := bufMap[id]
+	if buf.Source == "" {
+		buf = logdriver.LogEntry{}
+	}
+	return &buf
 }
