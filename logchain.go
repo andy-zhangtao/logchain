@@ -19,6 +19,7 @@ import (
 	"time"
 	"strings"
 	"strconv"
+	"github.com/Sirupsen/logrus"
 )
 
 type LogChain struct {
@@ -196,10 +197,14 @@ func sendMessage(l logger.Logger, buf *logdriver.LogEntry, containerid string) b
 // 支持的驱动类型:
 // graylog - 目前仅支持udp协议
 func New(info logger.Info) (logger.Logger, error) {
+	logrus.WithFields(logrus.Fields{"Driver":strings.ToLower(strings.TrimSpace(info.Config["driver"]))}).Info("logchain")
 	switch strings.ToLower(strings.TrimSpace(info.Config["driver"])) {
 	case "graylog":
 		bufMap = make(map[string]logdriver.LogEntry)
 		return NewGelf(info)
+	case "influx":
+		bufMap = make(map[string]logdriver.LogEntry)
+		return NewInfluxLog(info)
 	default:
 		return jsonfilelog.New(info)
 	}

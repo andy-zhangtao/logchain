@@ -16,6 +16,7 @@ import (
 	"github.com/andy-zhangtao/gogather/time"
 	"strconv"
 	"fmt"
+	"github.com/Sirupsen/logrus"
 )
 
 const (
@@ -189,7 +190,7 @@ func parseParaViaEnv(lr *LogsRequest) {
 	}
 
 	if log_opt == "" {
-		fmt.Println("Not Find Log_Opt. Then use default logger json-file")
+		fmt.Println("Not Find log_opt. Then use default logger json-file")
 		return
 	}
 
@@ -207,5 +208,15 @@ func parseParaViaEnv(lr *LogsRequest) {
 
 		lr.Info.Config[strings.TrimSpace(lgk[0])] = strings.TrimSpace(lgk[1])
 	}
-	lr.Info.Config["driver"] = "graylog"
+
+	driver := "graylog"
+	for _, s := range lr.Info.ContainerEnv {
+		if strings.Contains(s, "LOGCHAIN_DRIVER") {
+			driver = s[len("LOGCHAIN_DRIVER="):]
+			break
+		}
+	}
+
+	lr.Info.Config["driver"] = driver
+	logrus.WithFields(logrus.Fields{"Info": lr.Info}).Info("logchain")
 }

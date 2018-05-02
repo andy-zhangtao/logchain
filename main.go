@@ -19,7 +19,7 @@ var logLevels = map[string]logrus.Level{
 }
 
 func main() {
-	logrus.Println("==LogChain 1.0.7==")
+	logrus.Println("==LogChain 1.1.0==")
 	levelVal := os.Getenv("LOG_LEVEL")
 	if levelVal == "" {
 		levelVal = "info"
