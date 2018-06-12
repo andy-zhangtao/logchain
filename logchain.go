@@ -13,13 +13,14 @@ import (
 	"syscall"
 	"github.com/tonistiigi/fifo"
 	"context"
-	"encoding/binary"
-	protoio "github.com/gogo/protobuf/io"
 	"github.com/docker/docker/api/types/plugins/logdriver"
 	"time"
 	"strings"
 	"strconv"
 	"github.com/Sirupsen/logrus"
+	"encoding/binary"
+	protoio "github.com/gogo/protobuf/io"
+	"github.com/andy-zhangtao/logchain/log"
 )
 
 type LogChain struct {
@@ -91,28 +92,28 @@ func (lc *LogChain) Handler(lr logging.LogsRequest) error {
 	lc.mu.Unlock()
 
 	go consumeLog(lf)
-	go func() {
-		/*每10秒推送一次日志*/
-		for {
-			now := time.Now()
-			next := now.Add(time.Minute * 1)
-			next = time.Date(next.Year(), next.Month(), next.Day(), next.Hour(), next.Minute(), 0, 0, next.Location())
-			t := time.NewTimer(next.Sub(now))
-
-			select {
-			case <-t.C:
-				buf := getLogEntry(lr.Info.ContainerID)
-				if len(lf.tempStr) > 0 || len(buf.Line) > 0 {
-					lf.mutex.Lock()
-					buf.Line = append([]byte(strings.Join(lf.tempStr, "\n\r")), buf.Line...)
-					sendMessage(lf.driver, buf, lf.info.ContainerID)
-					lf.mutex.Unlock()
-					lf.resetStr()
-				}
-
-			}
-		}
-	}()
+	//go func() {
+	//	/*每10秒推送一次日志*/
+	//	for {
+	//		now := time.Now()
+	//		next := now.Add(time.Minute * 1)
+	//		next = time.Date(next.Year(), next.Month(), next.Day(), next.Hour(), next.Minute(), 0, 0, next.Location())
+	//		t := time.NewTimer(next.Sub(now))
+	//
+	//		select {
+	//		case <-t.C:
+	//			buf := getLogEntry(lr.Info.ContainerID)
+	//			if len(lf.tempStr) > 0 || len(buf.Line) > 0 {
+	//				lf.mutex.Lock()
+	//				buf.Line = append([]byte(strings.Join(lf.tempStr, "\n\r")), buf.Line...)
+	//				sendMessage(lf.driver, buf, lf.info.ContainerID)
+	//				lf.mutex.Unlock()
+	//				lf.resetStr()
+	//			}
+	//
+	//		}
+	//	}
+	//}()
 	go func() {
 		select {
 		case <-lc.stop:
@@ -144,9 +145,8 @@ func consumeLog(lf *logPair) {
 	defer dec.Close()
 	buf := getLogEntry(lf.info.ContainerID)
 
-	idx := 0
 	for {
-		idx ++
+
 		if err := dec.ReadMsg(buf); err != nil {
 			if err == io.EOF {
 				fmt.Errorf("Name [%s] err [%s] shutting down log logger \n", lf.info.ContainerName, err.Error())
@@ -162,22 +162,57 @@ func consumeLog(lf *logPair) {
 
 		lf.jsonl.Log(&logger.Message{Line: buf.Line, Source: lf.info.ContainerName})
 
-		if idx >= lf.bufLines {
-			buf.Line = append([]byte(strings.Join(lf.tempStr, "\n\r")), buf.Line...)
-			if sendMessage(lf.driver, buf, lf.info.ContainerID) == false {
-				continue
-			}
-			//lf.tempStr = lf.tempStr[:0]
-			lf.resetStr()
-			idx = 0
-		} else {
-			//lf.tempStr = append(lf.tempStr, string(buf.Line))
-			lf.addStr(string(buf.Line))
+		buf.Line = append([]byte(strings.Join(lf.tempStr, "\n\r")), buf.Line...)
+		if sendMessage(lf.driver, buf, lf.info.ContainerID) == false {
+			continue
 		}
+
+		lf.resetStr()
 
 		buf.Reset()
 	}
 }
+
+//func consumeLog(lf *logPair) {
+//
+//	dec := protoio.NewUint32DelimitedReader(lf.stream, binary.BigEndian, 1e6)
+//	defer dec.Close()
+//	buf := getLogEntry(lf.info.ContainerID)
+//
+//	idx := 0
+//	for {
+//		idx ++
+//		if err := dec.ReadMsg(buf); err != nil {
+//			if err == io.EOF {
+//				fmt.Errorf("Name [%s] err [%s] shutting down log logger \n", lf.info.ContainerName, err.Error())
+//				if len(lf.tempStr) > 0 {
+//					buf.Line = append([]byte(strings.Join(lf.tempStr, "\n\r")), buf.Line...)
+//					sendMessage(lf.driver, buf, lf.info.ContainerID)
+//				}
+//				lf.stream.Close()
+//				return
+//			}
+//			dec = protoio.NewUint32DelimitedReader(lf.stream, binary.BigEndian, 1e6)
+//		}
+//
+//		lf.jsonl.Log(&logger.Message{Line: buf.Line, Source: lf.info.ContainerName})
+//
+//		if idx >= lf.bufLines {
+//			buf.Line = append([]byte(strings.Join(lf.tempStr, "\n\r")), buf.Line...)
+//			if sendMessage(lf.driver, buf, lf.info.ContainerID) == false {
+//				continue
+//			}
+//			//lf.tempStr = lf.tempStr[:0]
+//			lf.resetStr()
+//			idx = 0
+//		} else {
+//			//lf.tempStr = append(lf.tempStr, string(buf.Line))
+//			lf.addStr(string(buf.Line))
+//		}
+//
+//		buf.Reset()
+//	}
+//}
 
 func sendMessage(l logger.Logger, buf *logdriver.LogEntry, containerid string) bool {
 	var msg logger.Message
@@ -197,9 +232,10 @@ func sendMessage(l logger.Logger, buf *logdriver.LogEntry, containerid string) b
 // 支持的驱动类型:
 // graylog - 目前仅支持udp协议
 func New(info logger.Info) (logger.Logger, error) {
-	logrus.WithFields(logrus.Fields{"Driver":strings.ToLower(strings.TrimSpace(info.Config["driver"]))}).Info("logchain")
+	logrus.WithFields(logrus.Fields{"Driver": strings.ToLower(strings.TrimSpace(info.Config["driver"]))}).Info("logchain")
 	switch strings.ToLower(strings.TrimSpace(info.Config["driver"])) {
 	case "graylog":
+		log.MyTrackID(info.Config["_track_id"])
 		bufMap = make(map[string]logdriver.LogEntry)
 		return NewGelf(info)
 	case "influx":

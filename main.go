@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"os/user"
 	"github.com/Sirupsen/logrus"
+	"github.com/andy-zhangtao/logchain/log"
 )
 
 const socketAddress = "/run/docker/plugins/logchain.sock"
@@ -19,11 +20,14 @@ var logLevels = map[string]logrus.Level{
 }
 
 func main() {
-	logrus.Println("==LogChain 1.1.0==")
+	logrus.Println("==LogChain 1.2.0==")
 	levelVal := os.Getenv("LOG_LEVEL")
 	if levelVal == "" {
 		levelVal = "info"
 	}
+
+	logrus.WithFields(log.Z.Fields(logrus.Fields{"LogChain Start Work": true})).Info(log.ModuleName)
+
 	if level, exists := logLevels[levelVal]; exists {
 		logrus.SetLevel(level)
 	} else {
@@ -45,5 +49,5 @@ func main() {
 		panic(err)
 	}
 
-	logrus.Println("===========LogChain Bye!==============")
+	logrus.WithFields(log.Z.Fields(logrus.Fields{"LogChain End Work": "ByeBye"})).Info(log.ModuleName)
 }

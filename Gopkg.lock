@@ -29,6 +29,16 @@
   version = "v1.0.4"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/andy-zhangtao/gogather"
+  packages = [
+    "random",
+    "time",
+    "zlog"
+  ]
+  revision = "fe9ea0bc8f25faa4ca382c5c152278ea95736f66"
+
+[[projects]]
   name = "github.com/coreos/go-systemd"
   packages = ["activation"]
   revision = "d2196463941895ee908e13531a23a39feb9e1243"
@@ -112,16 +122,26 @@
   version = "v0.5"
 
 [[projects]]
+  name = "github.com/influxdata/influxdb"
+  packages = [
+    "client/v2",
+    "models",
+    "pkg/escape"
+  ]
+  revision = "89e084a80fb1e0bf5e7d38038e3367f821fdf3d7"
+  version = "v1.5.3"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/petermattis/goid"
+  packages = ["."]
+  revision = "b0b1615b78e5ee59739545bb38426383b2cda4c9"
+
+[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/robertkowalski/graylog-golang"
-  packages = ["."]
-  revision = "e5295cfa28272ada50cb9b5d97696ee06e49ed42"
 
 [[projects]]
   branch = "master"
@@ -168,6 +188,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "defbe9ce6c8acf8385d3d85d941def1186e63aaa2cc0a8576204670e205e8f48"
+  inputs-digest = "4fe78b9aca0d495f91e5a957cc87e2a4c4463759e3099237724b0cb400438695"
   solver-name = "gps-cdcl"
   solver-version = 1

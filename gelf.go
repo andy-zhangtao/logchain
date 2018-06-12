@@ -15,6 +15,7 @@ import (
 	"github.com/docker/docker/daemon/logger"
 	"github.com/docker/docker/daemon/logger/loggerutils"
 	"github.com/docker/docker/pkg/urlutil"
+	"github.com/andy-zhangtao/logchain/log"
 )
 
 const name = "gelf"
@@ -57,6 +58,7 @@ func NewGelf(info logger.Info) (logger.Logger, error) {
 	}
 
 	extra := map[string]interface{}{
+		"_track_id":       log.TrackID,
 		"_container_id":   info.ContainerID,
 		"_container_name": info.Name(),
 		"_image_id":       info.ContainerImageID,
